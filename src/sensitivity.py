@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from src.solver import solve_cvrp
 
 OPTIMUM = 784
-OPTIMUM_CAPACITY = 100  # optimum yalnızca orijinal kapasitede geçerli
+OPTIMUM_CAPACITY = 100  # 784 sadece bu kapasitede geçerli
 
 
 def run_case(matrix, demands, nodes, capacity, num_vehicles, time_limit=10):

@@ -3,7 +3,7 @@ from src.solver import solve_cvrp
 from src.plot import plot_routes
 from src.sensitivity import sweep, print_table, save_csv, plot_sweep
 
-# 5 araçla optimuma ~7 sn'de, 8 araçla ~20 sn'de ulaşılıyor; 10 sn güvenli değil
+# 10 sn bazen yetmiyor, 8 araçla optimum ~20 sn'de geliyor
 TIME_LIMIT = 30
 
 coords, demands, capacity = parse_vrp("data/A-n32-k5.vrp")

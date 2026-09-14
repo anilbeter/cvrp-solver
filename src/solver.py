@@ -1,10 +1,21 @@
+import time
+
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
 SCALE = 1000
 
 
-def solve_cvrp(matrix, demands, nodes, capacity, num_vehicles, depot=0, time_limit=10):
+def solve_cvrp(
+    matrix,
+    demands,
+    nodes,
+    capacity,
+    num_vehicles,
+    depot=0,
+    time_limit=10,
+    track_progress=False,
+):
     n = len(matrix)
 
     int_matrix = [
@@ -45,6 +56,17 @@ def solve_cvrp(matrix, demands, nodes, capacity, num_vehicles, depot=0, time_lim
     )
     params.time_limit.FromSeconds(time_limit)
 
+    progress = []
+    if track_progress:
+
+        def on_solution():
+            cost = routing.CostVar().Max() / SCALE
+            if not progress or cost < progress[-1][1]:
+                progress.append((time.perf_counter() - start, cost))
+
+        routing.AddAtSolutionCallback(on_solution)
+
+    start = time.perf_counter()
     solution = routing.SolveWithParameters(params)
     if solution is None:
         return None
@@ -68,4 +90,4 @@ def solve_cvrp(matrix, demands, nodes, capacity, num_vehicles, depot=0, time_lim
         route.append(nodes[manager.IndexToNode(index)])
         routes.append({"vehicle": v, "nodes": route, "load": load})
 
-    return {"routes": routes, "distance": total / SCALE}
+    return {"routes": routes, "distance": total / SCALE, "progress": progress}

@@ -41,11 +41,27 @@ def parse_vrp(path):
     return coords, demands, capacity
 
 
+def parse_sol(path):
+    # .sol'da depo 0, .vrp'de 1 olduğu için numaralara 1 ekleniyor
+    routes = []
+    cost = None
+
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("Route"):
+                routes.append([int(x) + 1 for x in line.split(":")[1].split()])
+            elif line.startswith("Cost"):
+                cost = float(line.split()[1])
+
+    return routes, cost
+
+
 def build_distance_matrix(coords, rounded=False):
     """Düğümler arası Öklid (EUC_2D) mesafe matrisini kurar.
 
-    rounded=True ise her mesafe TSPLIB kuralına göre en yakın tam sayıya
-    yuvarlanır (nint). Benchmark optimumları (ör. 784) bu kuralla hesaplanır.
+    rounded=True ise mesafeler TSPLIB'deki gibi tam sayıya yuvarlanır,
+    benchmark optimumları bu kuralla hesaplanmış.
 
     Dönüş:
         matrix -> matrix[i][j] = i. ve j. düğüm arasındaki mesafe

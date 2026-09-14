@@ -2,7 +2,9 @@
 
 Kapasiteli araç rotalama problemini (CVRP) Google OR-Tools ile çözdüğüm bir
 proje. Çözücüyü optimumu bilinen bir benchmark örneğinde test ettim, sonra araç
-sayısı, kapasite ve süre limitinin sonucu nasıl etkilediğine baktım.
+sayısı, kapasite ve süre limitinin sonucu nasıl etkilediğine baktım. Son olarak
+aynı yöntemi 392 müşteriye kadar büyüyen örneklerde deneyip optimumdan ne kadar
+uzaklaştığını ölçtüm.
 
 ## Problem
 
@@ -40,7 +42,8 @@ sıkı.
 - En dolu araç: 98 / 100
 
 784'ün optimal olduğu literatürde kanıtlanmış, dolayısıyla bulunan çözüm de
-optimal.
+optimal. Rotalar da CVRPLIB'de yayımlanan optimal çözümle
+([data/A-n32-k5.sol](data/A-n32-k5.sol)) birebir aynı.
 
 ![Rotalar](results/routes_base.png)
 
@@ -94,8 +97,8 @@ bekliyordum ama veri öyle demiyor.
 verince fazlası hiç kullanılmıyor. Her ek araç depoya bir gidiş-dönüş daha
 demek, o yüzden çözücü onları boş bırakıyor.
 
-Fazla araç sonucu değiştirmiyor ama aramayı yavaşlatıyor. 5 araçla optimuma 7
-saniye civarında ulaşılıyor, 8 araçla 20 saniye civarında. Boş araçlar arama
+Fazla araç sonucu değiştirmiyor ama aramayı yavaşlatıyor. 5 araçla optimuma 5-7
+saniyede ulaşılıyor, 8 araçla 20 saniye civarında. Boş araçlar arama
 uzayını büyütüyor. Başta süre limitini 10 saniye tutmuştum ve 8 araçlı model
 796'da kalıyordu, limiti bu yüzden 30 saniyeye çıkardım.
 
@@ -113,8 +116,8 @@ uzayını büyütüyor. Başta süre limitini 10 saniye tutmuştum ve 8 araçlı
 
 Çözücü 796'yı daha ilk saniyede buluyor ve birkaç saniye orada takılı kalıyor.
 Guided Local Search'ün ceza mekanizması sonunda aramayı oradan çıkarıyor ve
-784'e yaklaşık 7. saniyede ulaşıyor. Bunu her iyileşmenin zamanını solution
-callback ile kaydederek ölçtüm.
+784'e çalıştırmaya göre 5 ile 7 saniye arasında ulaşıyor. Bunu her iyileşmenin
+zamanını solution callback ile kaydederek ölçtüm.
 
 Süre limiti gerçek saate göre işlediği için 10 saniye bu eşiğe çok yakın. Aynı
 ayar bir çalıştırmada 796 verdi, daha yavaş bir makinede de farklı sonuç
@@ -122,8 +125,57 @@ ayar bir çalıştırmada 796 verdi, daha yavaş bir makinede de farklı sonuç
 
 Şunu da not edeyim: metasezgisel bir yöntem optimumu bulsa bile optimum
 olduğunu kanıtlayamaz. 784'ün optimal olduğunu literatürden biliyoruz. Kanıt
-gerekiyorsa CP-SAT veya MIP gibi tam bir yöntem lazım. Problem büyüdükçe de süre
-limiti çok daha önemli hale geliyor.
+gerekiyorsa CP-SAT veya MIP gibi tam bir yöntem lazım. Problem büyüyünce ne
+olduğuna bir sonraki bölümde baktım.
+
+## Büyük örnekler
+
+A-n32-k5 küçük bir örnek ve orada optimumu bulmak tek başına çok şey söylemiyor.
+O yüzden aynı çözücüyü CVRPLIB'den seçtiğim, optimumu kanıtlanmış daha büyük
+örneklerde denedim: A setinden 32 ve 80 düğümlü iki örnek, X setinden (Uchoa et
+al., 2017) 101 ile 393 düğüm arası dört örnek. Her örneği bir kez 60 saniye çözüp
+her iyileşmenin zamanını kaydettim. 1, 10 ve 30 saniye sütunları bu tek
+çalıştırmadan okunuyor. Tablodaki değerler optimuma fark.
+
+| Örnek      | Müşteri | Filo | 1 sn   | 10 sn  | 30 sn  | 60 sn  | Son iyileşme |
+| ---------- | ------- | ---- | ------ | ------ | ------ | ------ | ------------ |
+| A-n32-k5   | 31      | 5    | %1.53  | %0.00  | %0.00  | %0.00  | 6 sn         |
+| A-n80-k10  | 79      | 10   | %4.93  | %3.52  | %1.93  | %1.93  | 11 sn        |
+| X-n101-k25 | 100     | 26   | %7.77  | %4.52  | %4.52  | %4.49  | 51 sn        |
+| X-n200-k36 | 199     | 38   | %4.33  | %3.70  | %3.67  | %3.67  | 29 sn        |
+| X-n298-k31 | 297     | 31   | %22.70 | %16.65 | %16.27 | %16.04 | 53 sn        |
+| X-n393-k38 | 392     | 39   | %11.88 | %8.84  | %8.01  | %8.01  | 17 sn        |
+
+![Optimuma fark zamanla](results/benchmark_progress.png)
+
+İki ayrı çalıştırmada 60 saniyelik sonuçlar birebir aynı çıktı, sadece saate bağlı
+ara değerler biraz oynuyor.
+
+Küçük A örneklerinde çözücü optimuma ulaşıyor ya da %2'nin altına iniyor. X
+örneklerinde ise 60 saniye sonunda fark %3.7 ile %16 arasında kalıyor. A-n32-k5'teki
+%0 büyük örneklere taşınmıyor.
+
+Fark boyutla düzenli büyümüyor. 199 müşterili X-n200-k36, 100 müşterili
+X-n101-k25'ten daha iyi sonuç veriyor ve en kötü sonuç en büyük örnekte değil,
+297 müşterili X-n298-k31'de çıkıyor. X seti bilerek farklı depo konumları,
+müşteri dağılımları ve talep yapılarıyla üretilmiş, yani bu örnekler sadece
+boyutta ayrışmıyor. Altı örnekten "boyut iki katına çıkınca fark şu kadar artıyor"
+gibi bir kural çıkarmak doğru olmaz.
+
+İlerlemenin büyük kısmı ilk birkaç saniyede geliyor. 10 saniyeden 60 saniyeye
+fark A-n80-k10 dışında her örnekte 1 puandan az kapanıyor. Son iyileşme bazı
+örneklerde 50. saniyeyi geçse de bunlar küçük adımlar: X-n101-k25'te 30.
+saniyeden sonra kazanılan fark sadece 0.03 puan. Arama belli bir noktadan sonra
+tıkanıyor, bu örneklerde süreyi artırmak tek başına farkı kapatmıyor.
+
+**Filo.** Her örnekte araç sayısını optimal çözümdeki rota sayısıyla başlattım.
+X setinde araç sayısı serbest, adındaki k sadece alt sınır. Nitekim X-n101-k25'in
+optimal çözümü 26 araç kullanıyor. X-n200-k36 ve X-n393-k38'de başlangıç
+heuristic'i (`PATH_CHEAPEST_ARC`) bu kadar araçla uygun bir çözüm kuramadı ve
+bütün süreyi harcayıp hiçbir şey döndürmedi. Bu yüzden benchmark önce 2
+saniyelik kısa denemelerle filoyu çözüm kurulana kadar birer artırıyor, bu iki
+örnekte filo 38 ve 39'a çıktı. X-n200-k36'da çözücü 37 araç kullandı, optimal
+çözüm ise 36 araçlı.
 
 ## Yöntem
 
@@ -168,14 +220,22 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Süre limitleri yüzünden tüm deneylerin bitmesi 7 dakika kadar sürüyor. Çıktılar
-`results/` klasörüne yazılıyor.
+Süre limitleri yüzünden tüm deneylerin bitmesi 7 dakika kadar sürüyor. Büyük
+örneklerle karşılaştırma ayrı bir betik, o da 6-7 dakika sürüyor:
+
+```bash
+python benchmark.py
+```
+
+Çıktılar `results/` klasörüne yazılıyor.
 
 ## Dosyalar
 
-- `data/A-n32-k5.vrp`: benchmark örneği (TSPLIB formatı)
-- `src/parser.py`: .vrp dosyasını okuma ve mesafe matrisi
+- `data/`: benchmark örnekleri (.vrp) ve CVRPLIB'deki optimal çözümleri (.sol)
+- `src/parser.py`: .vrp ve .sol dosyalarını okuma, mesafe matrisi
 - `src/solver.py`: OR-Tools modeli
 - `src/plot.py`: rota haritası
 - `src/sensitivity.py`: parametre taramaları, tablolar, CSV ve grafikler
-- `main.py`: bütün deneyleri çalıştırır
+- `src/benchmark.py`: büyük örneklerde ölçüm, tablo ve grafik
+- `main.py`: A-n32-k5 üzerindeki deneyleri çalıştırır
+- `benchmark.py`: büyük örneklerle karşılaştırmayı çalıştırır
